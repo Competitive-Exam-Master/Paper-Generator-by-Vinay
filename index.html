@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to PDF Converter by Vinay Godara</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: auto;
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="file"], input[type="number"], select {
+            display: block;
+            margin-top: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 16px); /* Adjust for padding */
+            box-sizing: border-box;
+        }
+        input[type="text"], textarea { /* Added textarea */
+            display: block;
+            margin-top: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 16px);
+            box-sizing: border-box;
+            resize: vertical; /* Allow vertical resizing of textarea */
+            min-height: 50px; /* Minimum height for textarea */
+        }
+        input[type="number"] {
+            width: 80px; /* Smaller width for number input */
+            display: inline-block; /* Keep it next to label if desired */
+            vertical-align: middle;
+        }
+        select {
+            width: 150px; /* Adjust width for select dropdown */
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .column-options label {
+            display: inline-block;
+            margin-right: 15px;
+            font-weight: normal;
+        }
+        .button-group {
+            text-align: center;
+            margin-top: 30px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin: 5px; /* Add some margin between buttons */
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #preview {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        #preview img {
+            max-width: 150px;
+            max-height: 150px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+        }
+        .image-preview-item {
+            display: inline-block;
+            position: relative;
+            margin: 10px; /* Base margin for spacing */
+            padding-left: 25px; /* Space for the number on the left */
+            border: 1px solid #ddd;
+            padding-top: 5px; /* Adjust padding to match text vertical alignment */
+            padding-bottom: 5px;
+            background-color: #fff;
+        }
+        .image-preview-item span {
+            /* Position the number to the left and top of the image */
+            position: absolute;
+            top: 5px; /* Aligned with the top padding of the image-preview-item */
+            left: 5px; /* From the left edge of the .image-preview-item */
+            background-color: transparent;
+            color: #333;
+            padding: 2px 0px; /* No horizontal padding to keep it tight */
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 3px;
+            text-align: right; /* Align number to the right within its small column */
+            width: 15px; /* Give it a fixed width for alignment */
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image to PDF Converter by Vinay Godara</h1>
+
+        <div class="form-group">
+            <label for="imageUpload">Upload Images:</label>
+            <input type="file" id="imageUpload" accept="image/*" multiple>
+        </div>
+
+        <div class="form-group">
+            <label>Select Layout:</label>
+            <div class="column-options">
+                <input type="radio" id="oneColumn" name="columns" value="1" checked>
+                <label for="oneColumn">One Column</label>
+                <input type="radio" id="twoColumns" name="columns" value="2">
+                <label for="twoColumns">Two Columns</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="pdfTitleInput">PDF Title:</label>
+            <textarea id="pdfTitleInput" placeholder="Enter PDF Title (Optional)" rows="4"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="titleLine1FontSizeInput">Title Line 1 Font Size:</label>
+            <input type="number" id="titleLine1FontSizeInput" value="20">
+        </div>
+
+        <div class="form-group">
+            <label for="titleLine2FontSizeInput">Title Line 2 Font Size:</label>
+            <input type="number" id="titleLine2FontSizeInput" value="16">
+        </div>
+
+        <div class="form-group">
+            <label for="titleLine3FontSizeInput">Title Line 3+ Font Size:</label>
+            <input type="number" id="titleLine3FontSizeInput" value="12">
+            <small>(Lines beyond the 3rd will use this size)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="titleLineSpacingInput">Title Line Spacing Multiplier:</label>
+            <input type="number" id="titleLineSpacingInput" value="1.1" step="0.05">
+            <small>(e.g., 1.0 for tight, 1.5 for loose)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="yOffset">Numbering Y-Offset (from image top):</label>
+            <input type="number" id="yOffset" value="5">
+            <small>(Positive moves down, negative moves up)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="fontSize">Numbering Font Size:</label>
+            <input type="number" id="fontSize" value="10">
+        </div>
+
+        <div class="form-group">
+            <label for="fontWeight">Numbering Font Weight:</label>
+            <select id="fontWeight">
+                <option value="normal">Normal</option>
+                <option value="bold">Bold</option>
+            </select>
+        </div>
+
+        <div class="button-group">
+            <button id="generatePdfBtn">Generate PDF</button>
+            <button id="saveSettingsBtn">Save Settings</button>
+        </div>
+
+        <div id="preview">
+            <h2>Image Preview:</h2>
+            <div id="imagePreviewsContainer">
+                </div>
+            <p class="error-message" id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const generatePdfBtn = document.getElementById('generatePdfBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn'); // New
+        const imagePreviewsContainer = document.getElementById('imagePreviewsContainer');
+        const errorMessage = document.getElementById('errorMessage');
+        const yOffsetInput = document.getElementById('yOffset');
+        const fontSizeInput = document.getElementById('fontSize');
+        const fontWeightSelect = document.getElementById('fontWeight');
+        const pdfTitleInput = document.getElementById('pdfTitleInput');
+        const titleLine1FontSizeInput = document.getElementById('titleLine1FontSizeInput');
+        const titleLine2FontSizeInput = document.getElementById('titleLine2FontSizeInput');
+        const titleLine3FontSizeInput = document.getElementById('titleLine3FontSizeInput');
+        const titleLineSpacingInput = document.getElementById('titleLineSpacingInput');
+        const oneColumnRadio = document.getElementById('oneColumn');
+        const twoColumnsRadio = document.getElementById('twoColumns');
+
+
+        let uploadedImages = []; // Stores objects { file: File, dataUrl: String }
+
+        // Function to save settings to localStorage
+        function saveSettings() {
+            const settings = {
+                layout: document.querySelector('input[name="columns"]:checked').value,
+                pdfTitle: pdfTitleInput.value,
+                titleLine1FontSize: titleLine1FontSizeInput.value,
+                titleLine2FontSize: titleLine2FontSizeInput.value,
+                titleLine3FontSize: titleLine3FontSizeInput.value,
+                titleLineSpacing: titleLineSpacingInput.value,
+                yOffset: yOffsetInput.value,
+                fontSize: fontSizeInput.value,
+                fontWeight: fontWeightSelect.value
+            };
+            localStorage.setItem('pdfConverterSettings', JSON.stringify(settings));
+            alert('Settings saved successfully!');
+        }
+
+        // Function to load settings from localStorage
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('pdfConverterSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                
+                // Restore layout
+                if (settings.layout === '1') {
+                    oneColumnRadio.checked = true;
+                } else {
+                    twoColumnsRadio.checked = true;
+                }
+
+                pdfTitleInput.value = settings.pdfTitle || '';
+                titleLine1FontSizeInput.value = settings.titleLine1FontSize || '20';
+                titleLine2FontSizeInput.value = settings.titleLine2FontSize || '16';
+                titleLine3FontSizeInput.value = settings.titleLine3FontSize || '12';
+                titleLineSpacingInput.value = settings.titleLineSpacing || '1.1';
+                yOffsetInput.value = settings.yOffset || '5';
+                fontSizeInput.value = settings.fontSize || '10';
+                fontWeightSelect.value = settings.fontWeight || 'normal';
+            }
+        }
+
+        imageUpload.addEventListener('change', function(event) {
+            errorMessage.textContent = ''; // Clear previous errors
+            imagePreviewsContainer.innerHTML = ''; // Clear previous previews
+            uploadedImages = []; // Reset uploaded images
+
+            const files = event.target.files;
+            if (files.length === 0) {
+                return;
+            }
+
+            Array.from(files).forEach((file, index) => {
+                if (!file.type.startsWith('image/')) {
+                    errorMessage.textContent = 'Please upload only image files.';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    uploadedImages.push({ file: file, dataUrl: dataUrl });
+
+                    // Create preview element
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.alt = `Image ${index + 1}`;
+
+                    const imgNumber = document.createElement('span');
+                    imgNumber.textContent = `${uploadedImages.length}.`; // Add a dot for clarity
+
+                    previewItem.appendChild(imgNumber);
+                    previewItem.appendChild(img);
+                    imagePreviewsContainer.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        generatePdfBtn.addEventListener('click', async function() {
+            if (uploadedImages.length === 0) {
+                errorMessage.textContent = 'Please upload at least one image.';
+                return;
+            }
+
+            errorMessage.textContent = ''; // Clear previous errors
+            const selectedColumns = document.querySelector('input[name="columns"]:checked').value;
+            const userYOffset = parseFloat(yOffsetInput.value);
+            const userFontSize = parseFloat(fontSizeInput.value);
+            const userFontWeight = fontWeightSelect.value;
+            const userPdfTitle = pdfTitleInput.value.trim();
+            
+            const userTitleLine1FontSize = parseFloat(titleLine1FontSizeInput.value);
+            const userTitleLine2FontSize = parseFloat(titleLine2FontSizeInput.value);
+            const userTitleLine3FontSize = parseFloat(titleLine3FontSizeInput.value);
+            const userTitleLineSpacing = parseFloat(titleLineSpacingInput.value);
+
+            const doc = new window.jspdf.jsPDF(); // Initialize jsPDF
+
+            const imgMargin = 10; // Padding around page/columns
+            const numberingColumnWidth = 15; // Width allocated for the number (e.g., "1.", "10.")
+            
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            let cursorX = imgMargin; // Initial X for the left margin
+            let cursorY = imgMargin; // Initial Y for the top margin
+
+            // --- Add PDF Title if provided ---
+            if (userPdfTitle) {
+                doc.setFont('helvetica', 'bold');
+                
+                const titleLines = userPdfTitle.split('\n');
+                let currentTitleY = imgMargin;
+                
+                titleLines.forEach((line, index) => {
+                    if (line.trim() !== '') {
+                        let currentLineFontSize;
+                        if (index === 0) {
+                            currentLineFontSize = userTitleLine1FontSize;
+                        } else if (index === 1) {
+                            currentLineFontSize = userTitleLine2FontSize;
+                        } else if (index === 2) {
+                            currentLineFontSize = userTitleLine3FontSize;
+                        } else {
+                            currentLineFontSize = userTitleLine3FontSize;
+                        }
+                        
+                        doc.setFontSize(currentLineFontSize);
+
+                        currentTitleY += currentLineFontSize / 2; 
+                        doc.text(line, pageWidth / 2, currentTitleY, { align: 'center' });
+                        currentTitleY += currentLineFontSize / 2 + (currentLineFontSize * (userTitleLineSpacing - 1));
+                    }
+                });
+
+                cursorY = currentTitleY + imgMargin; 
+            }
+
+            // --- Reset font settings for image numbering ---
+            doc.setFontSize(userFontSize);
+            doc.setFont('helvetica', userFontWeight);
+
+            let currentColumn = 0;
+            let imageCounter = 1;
+
+            for (const imgObj of uploadedImages) {
+                const imgData = imgObj.dataUrl;
+
+                const img = new Image();
+                img.src = imgData;
+                await new Promise(resolve => img.onload = resolve);
+
+                const imgWidth = img.width;
+                const imgHeight = img.height;
+
+                let effectiveImgWidth;
+                let effectiveImgHeight;
+                let xPositionImage;
+                let yPositionImage;
+                let xPositionText;
+                let yPositionText;
+
+                if (selectedColumns === '1') {
+                    effectiveImgWidth = pageWidth - (2 * imgMargin) - numberingColumnWidth;
+                    effectiveImgHeight = (imgHeight * effectiveImgWidth) / imgWidth;
+
+                    if (cursorY + effectiveImgHeight + imgMargin > pageHeight) {
+                        doc.addPage();
+                        cursorY = imgMargin;
+                    }
+
+                    xPositionImage = imgMargin + numberingColumnWidth;
+                    yPositionImage = cursorY;
+
+                    xPositionText = imgMargin + (numberingColumnWidth / 2);
+                    yPositionText = cursorY + userYOffset;
+
+
+                    doc.addImage(imgData, 'JPEG', xPositionImage, yPositionImage, effectiveImgWidth, effectiveImgHeight);
+                    doc.text(`${imageCounter}.`, xPositionText, yPositionText, { align: 'right' });
+                    cursorY += effectiveImgHeight + imgMargin;
+
+                } else {
+                    effectiveImgWidth = (pageWidth - (3 * imgMargin) - (2 * numberingColumnWidth)) / 2;
+                    effectiveImgHeight = (imgHeight * effectiveImgWidth) / imgWidth;
+
+                    let nextXPositionImage;
+                    let nextYPositionImage;
+                    let nextXPositionText;
+                    let nextYPositionText;
+
+                    if (currentColumn === 0) {
+                        nextXPositionImage = imgMargin + numberingColumnWidth;
+                        nextYPositionImage = cursorY;
+                        nextXPositionText = imgMargin + (numberingColumnWidth / 2);
+                        nextYPositionText = cursorY + userYOffset;
+                    } else {
+                        nextXPositionImage = pageWidth / 2 + (imgMargin / 2) + numberingColumnWidth;
+                        nextYPositionImage = cursorY;
+                        nextXPositionText = pageWidth / 2 + (imgMargin / 2) + (numberingColumnWidth / 2);
+                        nextYPositionText = cursorY + userYOffset;
+                    }
+
+                    if (nextYPositionImage + effectiveImgHeight + imgMargin > pageHeight) {
+                        doc.addPage();
+                        cursorY = imgMargin;
+                        currentColumn = 0;
+
+                        nextXPositionImage = imgMargin + numberingColumnWidth;
+                        nextYPositionImage = cursorY;
+                        nextXPositionText = imgMargin + (numberingColumnWidth / 2);
+                        nextYPositionText = cursorY + userYOffset;
+                    }
+
+                    xPositionImage = nextXPositionImage;
+                    yPositionImage = nextYPositionImage;
+                    xPositionText = nextXPositionText;
+                    yPositionText = nextYPositionText;
+
+                    doc.addImage(imgData, 'JPEG', xPositionImage, yPositionImage, effectiveImgWidth, effectiveImgHeight);
+                    doc.text(`${imageCounter}.`, xPositionText, yPositionText, { align: 'right' });
+
+                    currentColumn++;
+                    if (currentColumn >= 2) {
+                        currentColumn = 0;
+                        cursorY += effectiveImgHeight + imgMargin;
+                    }
+                }
+                imageCounter++;
+            }
+
+            doc.save('images.pdf');
+        });
+
+        // Load settings when the page loads
+        window.addEventListener('DOMContentLoaded', loadSettings);
+        // Add event listener for the save settings button
+        saveSettingsBtn.addEventListener('click', saveSettings);
+    </script>
+</body>
+</html>
