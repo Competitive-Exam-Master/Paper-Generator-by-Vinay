@@ -209,7 +209,7 @@
     <script>
         const imageUpload = document.getElementById('imageUpload');
         const generatePdfBtn = document.getElementById('generatePdfBtn');
-        const saveSettingsBtn = document.getElementById('saveSettingsBtn'); // New
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         const imagePreviewsContainer = document.getElementById('imagePreviewsContainer');
         const errorMessage = document.getElementById('errorMessage');
         const yOffsetInput = document.getElementById('yOffset');
@@ -329,7 +329,8 @@
 
             const imgMargin = 10; // Padding around page/columns
             const numberingColumnWidth = 15; // Width allocated for the number (e.g., "1.", "10.")
-            
+            const columnGap = 10; // Gap between two image columns
+
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -411,8 +412,10 @@
                     doc.text(`${imageCounter}.`, xPositionText, yPositionText, { align: 'right' });
                     cursorY += effectiveImgHeight + imgMargin;
 
-                } else {
-                    effectiveImgWidth = (pageWidth - (3 * imgMargin) - (2 * numberingColumnWidth)) / 2;
+                } else { // Two Columns
+                    // Calculate available width for each column
+                    const availableWidthForTwoColumns = pageWidth - (2 * imgMargin) - (2 * numberingColumnWidth) - columnGap;
+                    effectiveImgWidth = availableWidthForTwoColumns / 2;
                     effectiveImgHeight = (imgHeight * effectiveImgWidth) / imgWidth;
 
                     let nextXPositionImage;
@@ -425,18 +428,20 @@
                         nextYPositionImage = cursorY;
                         nextXPositionText = imgMargin + (numberingColumnWidth / 2);
                         nextYPositionText = cursorY + userYOffset;
-                    } else {
-                        nextXPositionImage = pageWidth / 2 + (imgMargin / 2) + numberingColumnWidth;
+                    } else { // Second column
+                        nextXPositionImage = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + numberingColumnWidth; // Start of second image
                         nextYPositionImage = cursorY;
-                        nextXPositionText = pageWidth / 2 + (imgMargin / 2) + (numberingColumnWidth / 2);
+                        nextXPositionText = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + (numberingColumnWidth / 2);
                         nextYPositionText = cursorY + userYOffset;
                     }
 
+                    // Check if current row has enough space for the image
                     if (nextYPositionImage + effectiveImgHeight + imgMargin > pageHeight) {
                         doc.addPage();
-                        cursorY = imgMargin;
-                        currentColumn = 0;
+                        cursorY = imgMargin; // Reset Y for new page
+                        currentColumn = 0; // Reset column for new page
 
+                        // Recalculate positions for the new page's first column
                         nextXPositionImage = imgMargin + numberingColumnWidth;
                         nextYPositionImage = cursorY;
                         nextXPositionText = imgMargin + (numberingColumnWidth / 2);
@@ -453,8 +458,8 @@
 
                     currentColumn++;
                     if (currentColumn >= 2) {
-                        currentColumn = 0;
-                        cursorY += effectiveImgHeight + imgMargin;
+                        currentColumn = 0; // Reset to first column for the next row
+                        cursorY += effectiveImgHeight + imgMargin; // Move cursor down for the next row of images
                     }
                 }
                 imageCounter++;
@@ -470,3 +475,4 @@
     </script>
 </body>
 </html>
+
