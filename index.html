@@ -148,6 +148,14 @@
         </div>
 
         <div class="form-group">
+            <label>Image Filter:</label>
+            <div>
+                <input type="checkbox" id="blackAndWhiteFilter">
+                <label for="blackAndWhiteFilter" style="display: inline-block; font-weight: normal;">Apply Black and White Filter</label>
+            </div>
+        </div>
+
+        <div class="form-group">
             <label for="pdfTitleInput">PDF Title:</label>
             <textarea id="pdfTitleInput" placeholder="Enter PDF Title (Optional)" rows="4"></textarea>
         </div>
@@ -222,6 +230,7 @@
         const titleLineSpacingInput = document.getElementById('titleLineSpacingInput');
         const oneColumnRadio = document.getElementById('oneColumn');
         const twoColumnsRadio = document.getElementById('twoColumns');
+        const blackAndWhiteFilterCheckbox = document.getElementById('blackAndWhiteFilter'); // New: Get checkbox
 
 
         let uploadedImages = []; // Stores objects { file: File, dataUrl: String }
@@ -237,7 +246,8 @@
                 titleLineSpacing: titleLineSpacingInput.value,
                 yOffset: yOffsetInput.value,
                 fontSize: fontSizeInput.value,
-                fontWeight: fontWeightSelect.value
+                fontWeight: fontWeightSelect.value,
+                applyBlackAndWhite: blackAndWhiteFilterCheckbox.checked // New: Save filter setting
             };
             localStorage.setItem('pdfConverterSettings', JSON.stringify(settings));
             alert('Settings saved successfully!');
@@ -264,6 +274,7 @@
                 yOffsetInput.value = settings.yOffset || '5';
                 fontSizeInput.value = settings.fontSize || '10';
                 fontWeightSelect.value = settings.fontWeight || 'normal';
+                blackAndWhiteFilterCheckbox.checked = settings.applyBlackAndWhite || false; // New: Load filter setting
             }
         }
 
@@ -307,6 +318,34 @@
             });
         });
 
+        // New function to convert image to grayscale
+        async function convertImageToGrayscale(imgDataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                        data[i] = avg; // red
+                        data[i + 1] = avg; // green
+                        data[i + 2] = avg; // blue
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg')); // Or 'image/png' if transparency is needed
+                };
+                img.src = imgDataUrl;
+            });
+        }
+
+
         generatePdfBtn.addEventListener('click', async function() {
             if (uploadedImages.length === 0) {
                 errorMessage.textContent = 'Please upload at least one image.';
@@ -315,6 +354,7 @@
 
             errorMessage.textContent = ''; // Clear previous errors
             const selectedColumns = document.querySelector('input[name="columns"]:checked').value;
+            const applyBlackAndWhiteFilter = blackAndWhiteFilterCheckbox.checked; // New: Get filter state
             const userYOffset = parseFloat(yOffsetInput.value);
             const userFontSize = parseFloat(fontSizeInput.value);
             const userFontWeight = fontWeightSelect.value;
@@ -378,7 +418,12 @@
 
             for (let i = 0; i < uploadedImages.length; i++) {
                 const imgObj = uploadedImages[i];
-                const imgData = imgObj.dataUrl;
+                let imgData = imgObj.dataUrl; // Use let as it might change
+
+                // Apply black and white filter if checked
+                if (applyBlackAndWhiteFilter) {
+                    imgData = await convertImageToGrayscale(imgData);
+                }
 
                 const img = new Image();
                 img.src = imgData;
