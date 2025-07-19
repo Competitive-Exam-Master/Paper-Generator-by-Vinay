@@ -374,8 +374,10 @@
 
             let currentColumn = 0;
             let imageCounter = 1;
+            let maxHeightInRow = 0; // Track the maximum height in the current row for two-column layout
 
-            for (const imgObj of uploadedImages) {
+            for (let i = 0; i < uploadedImages.length; i++) {
+                const imgObj = uploadedImages[i];
                 const imgData = imgObj.dataUrl;
 
                 const img = new Image();
@@ -398,7 +400,7 @@
 
                     if (cursorY + effectiveImgHeight + imgMargin > pageHeight) {
                         doc.addPage();
-                        cursorY = imgMargin;
+                        cursorY = imgMargin; // Reset cursorY for new page
                     }
 
                     xPositionImage = imgMargin + numberingColumnWidth;
@@ -407,62 +409,53 @@
                     xPositionText = imgMargin + (numberingColumnWidth / 2);
                     yPositionText = cursorY + userYOffset;
 
-
                     doc.addImage(imgData, 'JPEG', xPositionImage, yPositionImage, effectiveImgWidth, effectiveImgHeight);
                     doc.text(`${imageCounter}.`, xPositionText, yPositionText, { align: 'right' });
                     cursorY += effectiveImgHeight + imgMargin;
 
                 } else { // Two Columns
-                    // Calculate available width for each column
                     const availableWidthForTwoColumns = pageWidth - (2 * imgMargin) - (2 * numberingColumnWidth) - columnGap;
                     effectiveImgWidth = availableWidthForTwoColumns / 2;
                     effectiveImgHeight = (imgHeight * effectiveImgWidth) / imgWidth;
 
-                    let nextXPositionImage;
-                    let nextYPositionImage;
-                    let nextXPositionText;
-                    let nextYPositionText;
-
-                    if (currentColumn === 0) {
-                        nextXPositionImage = imgMargin + numberingColumnWidth;
-                        nextYPositionImage = cursorY;
-                        nextXPositionText = imgMargin + (numberingColumnWidth / 2);
-                        nextYPositionText = cursorY + userYOffset;
-                    } else { // Second column
-                        nextXPositionImage = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + numberingColumnWidth; // Start of second image
-                        nextYPositionImage = cursorY;
-                        nextXPositionText = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + (numberingColumnWidth / 2);
-                        nextYPositionText = cursorY + userYOffset;
-                    }
-
-                    // Check if current row has enough space for the image
-                    if (nextYPositionImage + effectiveImgHeight + imgMargin > pageHeight) {
+                    // If starting a new row (or first image on page), check if it fits.
+                    // If it's the second image, we've already checked for the row's overall height.
+                    if (currentColumn === 0 && (cursorY + effectiveImgHeight + imgMargin > pageHeight)) {
                         doc.addPage();
                         cursorY = imgMargin; // Reset Y for new page
-                        currentColumn = 0; // Reset column for new page
-
-                        // Recalculate positions for the new page's first column
-                        nextXPositionImage = imgMargin + numberingColumnWidth;
-                        nextYPositionImage = cursorY;
-                        nextXPositionText = imgMargin + (numberingColumnWidth / 2);
-                        nextYPositionText = cursorY + userYOffset;
+                        maxHeightInRow = 0; // Reset max height for the new row
                     }
-
-                    xPositionImage = nextXPositionImage;
-                    yPositionImage = nextYPositionImage;
-                    xPositionText = nextXPositionText;
-                    yPositionText = nextYPositionText;
+                    
+                    if (currentColumn === 0) { // First image in the current row
+                        xPositionImage = imgMargin + numberingColumnWidth;
+                        yPositionImage = cursorY;
+                        xPositionText = imgMargin + (numberingColumnWidth / 2);
+                        yPositionText = cursorY + userYOffset;
+                        maxHeightInRow = effectiveImgHeight; // Initialize maxHeight for this row
+                    } else { // Second image in the current row
+                        xPositionImage = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + numberingColumnWidth;
+                        yPositionImage = cursorY; // Use the same Y as the first image in the pair
+                        xPositionText = imgMargin + numberingColumnWidth + effectiveImgWidth + columnGap + (numberingColumnWidth / 2);
+                        yPositionText = cursorY + userYOffset;
+                        maxHeightInRow = Math.max(maxHeightInRow, effectiveImgHeight); // Update max height if this image is taller
+                    }
 
                     doc.addImage(imgData, 'JPEG', xPositionImage, yPositionImage, effectiveImgWidth, effectiveImgHeight);
                     doc.text(`${imageCounter}.`, xPositionText, yPositionText, { align: 'right' });
 
                     currentColumn++;
-                    if (currentColumn >= 2) {
-                        currentColumn = 0; // Reset to first column for the next row
-                        cursorY += effectiveImgHeight + imgMargin; // Move cursor down for the next row of images
+                    if (currentColumn >= 2) { // After placing two images in a row
+                        currentColumn = 0; // Reset for the next row
+                        cursorY += maxHeightInRow + imgMargin; // Advance cursor by the max height in this completed row
+                        maxHeightInRow = 0; // Reset max height for the next row
                     }
                 }
                 imageCounter++;
+            }
+
+            // Handle the case where the last image is a single image in a two-column layout
+            if (selectedColumns === '2' && currentColumn === 1) {
+                cursorY += maxHeightInRow + imgMargin;
             }
 
             doc.save('images.pdf');
@@ -475,4 +468,3 @@
     </script>
 </body>
 </html>
-
